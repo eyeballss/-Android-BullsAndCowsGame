@@ -2,7 +2,6 @@ package kr.ac.kookmin.embedded.bluetoothgame;
 
 
 import android.app.Activity;
-import android.app.Application;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -17,12 +16,10 @@ import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -39,7 +36,8 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     static final String BLUE_NAME = "Bulls And Cows";  // 접속시 사용하는 이름
     // 접속시 사용하는 고유 ID
     static final UUID BLUE_UUID = UUID.fromString("fa87c0d0-afac-11de-8a39-0800200c9a66");
-
+    static int listMode=0; //리스트 모드가 0이면 블루투스 디바이스 리스트로 사용
+                        //리스트 모드가 1이면 채팅창으로 사용(터치시 아무 이벤트도 안 발생)
 
     Button mSearchBtn; // 검색, 중지 버튼
     Button mFindMeBtn; // 내 디바이스 검색 버튼
@@ -52,9 +50,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     ServerThread mSThread = null; // 서버 소켓 접속 스레드
     SocketThread mSocketThread = null; // 데이터 송수신 스레드
 
-    //접속 후 쓰는 뷰들
-    Button OMG;
-    ImageView sample;
 
 
 
@@ -67,12 +62,9 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         mSearchBtn = (Button) findViewById(R.id.searchBtn);
         mFindMeBtn = (Button) findViewById(R.id.fineMeBtn);
 
-        //접속 후 쓰는 뷰들
-        OMG = (Button)findViewById(R.id.OMG);
-        sample = (ImageView)findViewById(R.id.sample);
-
         // ListView 초기화
         initListView();
+
 
         // 블루투스 사용 가능상태 판단
         boolean isBlue = canUseBluetooth();
@@ -103,6 +95,19 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 //        // 다른 디바이스에 자신을 노출
 //        setDiscoverable();
     }
+
+
+    // 디바이스를 ListView 에 추가
+    public void addDeviceToList(String name, String address) {
+        // ListView 와 연결된 ArrayList 에 새로운 항목을 추가
+        String deviceInfo = name + " - " + address;
+        Log.d("tag1", "Device Find: " + deviceInfo);
+        mArDevice.add(deviceInfo);
+        // 화면을 갱신한다
+        ArrayAdapter adapter = (ArrayAdapter) mListDevice.getAdapter();
+        adapter.notifyDataSetChanged();
+    }
+
 
 
     // 블루투스 사용 가능상태 판단
@@ -146,64 +151,18 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         }
     }
 
-    // 원격 디바이스 검색 시작
-    public void startFindDevice() {
-        // 원격 디바이스 검색 중지
-        stopFindDevice();
-        // 디바이스 검색 시작
-        mBA.startDiscovery();
-        // 원격 디바이스 검색 이벤트 리시버 등록
-        registerReceiver(mBlueRecv, new IntentFilter(BluetoothDevice.ACTION_FOUND));
-    }
 
-    // 디바이스 검색 중지
-    public void stopFindDevice() {
-        // 현재 디바이스 검색 중이라면 취소한다
-        if (mBA.isDiscovering()) {
-            mBA.cancelDiscovery();
-            // 브로드캐스트 리시버를 등록 해제한다
-            unregisterReceiver(mBlueRecv);
-        }
-    }
 
-    // 디바이스를 ListView 에 추가
-    public void addDeviceToList(String name, String address) {
-        // ListView 와 연결된 ArrayList 에 새로운 항목을 추가
-        String deviceInfo = name + " - " + address;
-        Log.d("tag1", "Device Find: " + deviceInfo);
-        mArDevice.add(deviceInfo);
-        // 화면을 갱신한다
-        ArrayAdapter adapter = (ArrayAdapter) mListDevice.getAdapter();
-        adapter.notifyDataSetChanged();
-    }
 
-    // ListView 초기화
-    public void initListView() {
-        // 어댑터 생성
-        mArDevice = new ArrayList<String>();
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
-                android.R.layout.simple_list_item_1, mArDevice);
-        // ListView 에 어댑터와 이벤트 리스너를 지정
-        mListDevice = (ListView) findViewById(R.id.listDevice);
-        mListDevice.setAdapter(adapter);
-        mListDevice.setOnItemClickListener(this);
-    }
 
-    // 다른 디바이스에게 자신을 검색 허용
-    public void setDiscoverable() {
-        // 현재 검색 허용 상태라면 함수 탈출
-        if (mBA.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)
-            return;
-        // 다른 디바이스에게 자신을 검색 허용 지정
-        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 60);
-        startActivity(intent);
-    }
+
+
 
 
     // ListView 항목 선택 이벤트 함수
     public void onItemClick(AdapterView parent, View view, int position, long id) {
         // 사용자가 선택한 항목의 내용을 구한다
+        if(listMode>0) return;
         String strItem = mArDevice.get(position);
 
         // 사용자가 선택한 디바이스의 주소를 구한다
@@ -227,13 +186,6 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         mCThread.start();
     }
 
-    // 메시지를 화면에 표시
-    public void showMessage(String strMsg) {
-        // 메시지 텍스트를 핸들러에 전달
-        Message msg = Message.obtain(mHandler, 0, strMsg);
-        mHandler.sendMessage(msg);
-        Log.d("tag1", strMsg);
-    }
 
     // 원격 디바이스와 접속되었으면 데이터 송수신 스레드를 시작
     public void onConnected(BluetoothSocket socket) {
@@ -262,12 +214,13 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     {
         public void handleMessage(Message msg)
         {
-            //리스트뷰와 서치버튼 사라져라~!
+            //서치버튼 사라져라~!
             mSearchBtn.setVisibility(View.GONE);
             mFindMeBtn.setVisibility(View.GONE);
-            mListDevice.setVisibility(View.GONE);
-            OMG.setVisibility(View.VISIBLE);
-            sample.setVisibility(View.VISIBLE);
+
+            initListView();
+            listMode++;
+            mListDevice.setStackFromBottom(true);
         }
     };
 
@@ -316,15 +269,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
             }
         }
     };
-    // 메시지 화면 출력을 위한 핸들러
-    Handler mHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            if (msg.what == 0) {
-                String strMsg = (String) msg.obj;
-                mTextMsg.setText(strMsg);
-            }
-        }
-    };
+
+
+
+
+
 
     // 앱이 종료될 때 디바이스 검색 중지
     public void onDestroy() {
@@ -454,6 +403,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                     // 입력 스트림에서 데이터를 읽는다
                     bytes = mmInStream.read(buffer);
                     String strBuf = new String(buffer, 0, bytes);
+                    sendChatMsg("Receive: " + strBuf);
                     showMessage("Receive: " + strBuf);
                     SystemClock.sleep(1);
                 } catch (IOException e) {
@@ -469,6 +419,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                 // 출력 스트림에 데이터를 저장한다
                 byte[] buffer = strBuf.getBytes();
                 mmOutStream.write(buffer);
+                sendChatMsg("Send: " + strBuf);
                 showMessage("Send: " + strBuf);
             } catch (IOException e) {
                 showMessage("Socket write error");
@@ -476,4 +427,99 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         }
     }
 
+
+
+
+
+
+
+    // 원격 디바이스 검색 시작
+    public void startFindDevice() {
+        // 원격 디바이스 검색 중지
+        stopFindDevice();
+        // 디바이스 검색 시작
+        mBA.startDiscovery();
+        // 원격 디바이스 검색 이벤트 리시버 등록
+        registerReceiver(mBlueRecv, new IntentFilter(BluetoothDevice.ACTION_FOUND));
+    }
+
+    // 디바이스 검색 중지
+    public void stopFindDevice() {
+        // 현재 디바이스 검색 중이라면 취소한다
+        if (mBA.isDiscovering()) {
+            mBA.cancelDiscovery();
+            // 브로드캐스트 리시버를 등록 해제한다
+            unregisterReceiver(mBlueRecv);
+        }
+    }
+    // 다른 디바이스에게 자신을 검색 허용
+    public void setDiscoverable() {
+        // 현재 검색 허용 상태라면 함수 탈출
+        if (mBA.getScanMode() == BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE)
+            return;
+        // 다른 디바이스에게 자신을 검색 허용 지정
+        Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 10);
+        startActivity(intent);
+    }
+
+
+
+
+
+
+    //채팅 메세지를 리스트뷰에 올림
+    public void sendChatMsg(String chatMsg){
+        Message msg = Message.obtain(mChatHdr, 0, chatMsg);
+        mChatHdr.sendMessage(msg);
+        Log.d("tag1", chatMsg);
+    }
+    // 메시지 화면 출력을 위한 핸들러
+    Handler mChatHdr = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                String chatMsg = (String) msg.obj;
+                addChatToList(chatMsg);
+            }
+        }
+    };
+
+    //채팅 내용을 리스트에 올림
+    public void addChatToList(String content) {
+        Log.d("tag1", "Add '" + content + "' to List");
+        mArDevice.add(content);
+        ArrayAdapter adapter = (ArrayAdapter) mListDevice.getAdapter();
+        adapter.notifyDataSetChanged();
+    }
+
+
+
+    // 메시지를 화면에 표시
+    public void showMessage(String strMsg) {
+        // 메시지 텍스트를 핸들러에 전달
+        Message msg = Message.obtain(mHandler, 0, strMsg);
+        mHandler.sendMessage(msg);
+        Log.d("tag1", strMsg);
+    }
+    // 메시지 화면 출력을 위한 핸들러
+    Handler mHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                String strMsg = (String) msg.obj;
+                mTextMsg.setText(strMsg);
+            }
+        }
+    };
+
+    // ListView 초기화
+    public void initListView() {
+        // 어댑터 생성
+        mArDevice = new ArrayList<String>();
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, mArDevice);
+        // ListView 에 어댑터와 이벤트 리스너를 지정
+        mListDevice = (ListView) findViewById(R.id.listDevice);
+        mListDevice.setAdapter(adapter);
+        mListDevice.setOnItemClickListener(this);
+    }
 }

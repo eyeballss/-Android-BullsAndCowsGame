@@ -36,48 +36,36 @@
             android:text="Find me" />
     </LinearLayout>
 
+
+    <ListView
+        android:id="@+id/listDevice"
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_gravity="bottom"
+        android:transcriptMode="normal"
+        android:gravity="bottom" />
+
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <EditText
             android:id="@+id/editData"
-            android:layout_width="0px"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
             android:layout_weight="3" />
 
         <Button
             android:id="@+id/sendBtn"
-            android:layout_width="0px"
+            android:layout_width="15dp"
             android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
             android:layout_weight="1"
             android:onClick="onClick"
             android:text="Send" />
+
     </LinearLayout>
 
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
-
-        <ListView
-            android:id="@+id/listDevice"
-            android:layout_width="match_parent"
-            android:layout_height="200dp" />
-
-        <ImageView
-            android:id="@+id/sample"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:visibility="invisible"
-            android:layout_marginTop="100dp"
-            android:src="@mipmap/ic_launcher"/>
-        <Button
-            android:id="@+id/OMG"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="invisible"
-            android:text="!!!!!!"/>
-
-    </RelativeLayout>
 </LinearLayout>
