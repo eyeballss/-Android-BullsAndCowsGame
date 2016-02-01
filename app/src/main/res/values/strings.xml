@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">BluetoothGame</string>
+    <string name="edittext_onenum">숫</string>
+    <string name="edittext_twonum">자</string>
+    <string name="edittext_threenum">야</string>
+    <string name="edittext_fournum">구</string>
+
+
+
+
 </resources>

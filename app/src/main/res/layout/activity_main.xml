@@ -15,10 +15,9 @@
         android:id="@+id/textMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
-
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="100dp"
+        android:layout_height="wrap_content"
         android:orientation="horizontal">
 
         <Button
@@ -34,38 +33,116 @@
             android:layout_height="wrap_content"
             android:onClick="onClick"
             android:text="Find me" />
-    </LinearLayout>
-
-
-    <ListView
-        android:id="@+id/listDevice"
-        android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_gravity="bottom"
-        android:transcriptMode="normal"
-        android:gravity="bottom" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-
-        <EditText
-            android:id="@+id/editData"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_weight="3" />
 
         <Button
-            android:id="@+id/sendBtn"
-            android:layout_width="15dp"
+            android:id="@+id/refreshBtn"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:layout_weight="1"
             android:onClick="onClick"
-            android:text="Send" />
-
+            android:text="Refresh" />
     </LinearLayout>
+
+    <ScrollView
+        android:id="@+id/scrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#EEEEEE"
+            android:orientation="vertical">
+
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center">
+
+                <EditText
+                    android:id="@+id/oneNum"
+                    android:hint="@string/edittext_onenum"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:gravity="center"
+                    android:maxLength="1"
+                    android:inputType="number"
+                    android:digits="0123456789"
+                    android:textSize="60dp"/>
+                <EditText
+                    android:id="@+id/twoNum"
+                    android:hint="@string/edittext_twonum"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:gravity="center"
+                    android:maxLength="1"
+                    android:inputType="number"
+                    android:digits="0123456789"
+                    android:textSize="60dp"/>
+                <EditText
+                    android:id="@+id/threeNum"
+                    android:hint="@string/edittext_threenum"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:gravity="center"
+                    android:maxLength="1"
+                    android:inputType="number"
+                    android:digits="0123456789"
+                    android:textSize="60dp"/>
+                <EditText
+                    android:id="@+id/fourNum"
+                    android:hint="@string/edittext_fournum"
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:gravity="center"
+                    android:maxLength="1"
+                    android:inputType="number"
+                    android:digits="0123456789"
+                    android:textSize="60dp"/>
+
+                
+            </LinearLayout>
+
+
+            <ListView
+                android:id="@+id/listDevice"
+                android:layout_width="match_parent"
+                android:layout_height="350dp"
+                android:layout_gravity="bottom"
+                android:transcriptMode="normal"
+                android:gravity="bottom" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/editData"
+                    android:layout_width="65dp"
+                    android:layout_height="wrap_content"
+                    android:singleLine="true"
+                    android:visibility="invisible"
+                    android:layout_weight="3"/>
+
+                <Button
+                    android:id="@+id/sendBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="bottom"
+                    android:onClick="onClick"
+                    android:layout_weight="1"
+                    android:visibility="invisible"
+                    android:text="Send"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+
+
+    </ScrollView>
 
 </LinearLayout>
