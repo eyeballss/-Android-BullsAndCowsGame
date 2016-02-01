@@ -1,6 +1,5 @@
 package kr.ac.kookmin.embedded.bluetoothgame;
 
-
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -21,6 +20,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,6 +40,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     static int listMode=0; //리스트 모드가 0이면 블루투스 디바이스 리스트로 사용
                         //리스트 모드가 1이면 채팅창으로 사용(터치시 아무 이벤트도 안 발생)
 
+    Button mSendBtn; //보내기 버튼
     Button mSearchBtn; // 검색, 중지 버튼
     Button mFindMeBtn; // 내 디바이스 검색 버튼
     TextView mTextMsg; // 상태 보여주는 뷰
@@ -49,8 +51,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     ClientThread mCThread = null; // 클라이언트 소켓 접속 스레드
     ServerThread mSThread = null; // 서버 소켓 접속 스레드
     SocketThread mSocketThread = null; // 데이터 송수신 스레드
+    ScrollView mScrollViw = null; //키패드를 피해 올라가도록 만든 스크롤뷰
 
-
+    //게임에 쓰이는 아이템들
+    EditText oneNum=null, twoNum=null, threeNum=null, fourNum=null;
+    int ready=0;
 
 
     @Override
@@ -61,6 +66,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         mEditData = (EditText) findViewById(R.id.editData);
         mSearchBtn = (Button) findViewById(R.id.searchBtn);
         mFindMeBtn = (Button) findViewById(R.id.fineMeBtn);
+        mScrollViw = (ScrollView)findViewById(R.id.scrollView);
+        oneNum=(EditText)findViewById(R.id.oneNum);
+        twoNum=(EditText)findViewById(R.id.twoNum);
+        threeNum=(EditText)findViewById(R.id.threeNum);
+        fourNum=(EditText)findViewById(R.id.fourNum);
 
         // ListView 초기화
         initListView();
@@ -71,6 +81,24 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         if (isBlue)
             // 페어링된 원격 디바이스 목록 구하기
             getParedDevice();
+
+
+
+
+        //채팅할 때 키패드와 함께 에딧텍스트도 올라가도록 만듦
+//        mEditData.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+//            @Override
+//            public void onFocusChange(View v, boolean hasFocus) {
+//                if(hasFocus==true){
+//                    mScrollViw.postDelayed(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            mScrollViw.smoothScrollBy(0,800);
+//                        }
+//                    },100);
+//                }
+//            }
+//        });
     }
 
 
@@ -83,6 +111,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
 
         // 블루투스 어댑터에서 페어링된 원격 디바이스 목록을 구한다
         Set<BluetoothDevice> devices = mBA.getBondedDevices();
+//        mBA.startDiscovery();
         // 디바이스 목록에서 하나씩 추출
         for (BluetoothDevice device : devices) {
             // 디바이스를 목록에 추가
@@ -163,7 +192,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
     public void onItemClick(AdapterView parent, View view, int position, long id) {
         // 사용자가 선택한 항목의 내용을 구한다
         if(listMode>0) return;
-        String strItem = mArDevice.get(position);
+        String strItem = mArDevice.get(position); //클릭한 아이템을 얻음
 
         // 사용자가 선택한 디바이스의 주소를 구한다
         int pos = strItem.indexOf(" - ");
@@ -209,20 +238,104 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
         mSocketThread.start();
     }
 
-    //리스트뷰를 없애버리는 핸들러
+    //리스트뷰를 없애버리는 핸들러였으나 지금은 리스트뷰를 남겨두고 게임 모드로 넘어가게 함
     final Handler removeLitHdr = new Handler()
     {
         public void handleMessage(Message msg)
         {
             //서치버튼 사라져라~!
-            mSearchBtn.setVisibility(View.GONE);
-            mFindMeBtn.setVisibility(View.GONE);
+//            mSearchBtn.setVisibility(View.GONE);
+            mSearchBtn.setText("Ready");
+//            mFindMeBtn.setVisibility(View.GONE);
+            mFindMeBtn.setText("History");
 
             initListView();
             listMode++;
-            mListDevice.setStackFromBottom(true);
+//            gameStart();//게임을 시작합니다.
         }
     };
+
+//    public void gameStart(){
+//        oneNum=(EditText)findViewById(R.id.oneNum);
+//        twoNum=(EditText)findViewById(R.id.twoNum);
+//        threeNum=(EditText)findViewById(R.id.threeNum);
+//        fourNum=(EditText)findViewById(R.id.fourNum);
+//        mSendBtn=(Button)findViewById(R.id.sendBtn);
+//
+//        initGame();
+//    }
+//
+//    public void initGame(){
+//        initListView();
+//        mEditData.setVisibility(View.VISIBLE);
+////        oneNum.setFocusable(true);
+////        twoNum.setClickable(true);
+////        threeNum.setClickable(true);
+////        fourNum.setClickable(true);
+//        mSendBtn.setVisibility(View.VISIBLE);
+//    }
+
+    public void readyCheck(){
+        //중복 숫자 검사
+        new Thread()
+        {
+            public void run()
+            {
+                Message msg = startGame.obtainMessage();
+                startGame.sendMessage(msg);
+            }
+        }.start();
+    }
+
+    final Handler startGame = new Handler()
+    {
+        public void handleMessage(Message msg)
+        {
+            if(!mSearchBtn.getText().equals("Ready")) return;
+//            if(oneNum.getText()==null || twoNum.getText()==null || threeNum.getText()==null || fourNum.getText()==null)
+//            Toast.makeText(getApplicationContext(), "숫자를 채우세요", Toast.LENGTH_SHORT).show();
+            HashSet<String> readyTest = new HashSet<String>();
+            readyTest.add(String.valueOf(oneNum.getText()));
+            readyTest.add(String.valueOf(twoNum.getText()));
+            readyTest.add(String.valueOf(threeNum.getText()));
+            readyTest.add(String.valueOf(fourNum.getText()));
+            if(readyTest.size()!=4){
+                Toast.makeText(getApplicationContext(), "Input correct numbers!", Toast.LENGTH_SHORT).show();
+            }
+            else {
+                mSearchBtn.setText("Hide");
+                oneNum.setClickable(false);
+                twoNum.setClickable(false);
+                threeNum.setClickable(false);
+                fourNum.setClickable(false);
+                oneNum.setFocusable(false);
+                twoNum.setFocusable(false);
+                threeNum.setFocusable(false);
+                fourNum.setFocusable(false);
+
+                if (mSocketThread == null) return;
+                // 사용자가 입력한 텍스트를 소켓으로 전송한다
+                mSocketThread.write("준비되었습니다.");
+
+                // 상대가 준비되었고 방금 내가 준비를 끝냈으면
+                if(ready==2) {
+                    gameStart();
+                }
+                // 상대 준비가 안되어있는데 내가 준비를 끝냈으면
+                else ready=1;
+            }
+        }
+    };
+
+    private void gameStart(){
+        //게임 클래스를 만들고 게임을 시작합니다. 이제 start에서 다 처리함.
+        Game game = new Game(String.valueOf(oneNum.getText()), String.valueOf(twoNum.getText()), String.valueOf(threeNum.getText()), String.valueOf(fourNum.getText()), //숫자들
+                mSearchBtn, mEditData, mSendBtn, mFindMeBtn,//레디 버튼과 채팅창과 보내기 버튼과 히스토리 버튼
+                mTextMsg, mArDevice, mListDevice, // 상태창과 채팅창 블루투스 어댑터와 채팅창리스트뷰
+                mCThread, mSThread, mSocketThread // 클라이언트 소켓 접속 스레드, 서버 소켓 접속 스레드, 데이터 송수신 스레드
+        );
+//                    game.start();
+    }
 
     // 버튼 클릭 이벤트 함수. 모든 버튼이 여기 있음.
     public void onClick(View v) {
@@ -238,12 +351,22 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                     stopFindDevice();
                     mSearchBtn.setText("Search");
                 }
+                else if(mSearchBtn.getText().equals("Ready")){
+                    readyCheck(); //숫자 4개 다 맞는지 체크
+                }
+                break;
             }
             case R.id.fineMeBtn:{
                 //내 디바이스 검색 허용.
-                setDiscoverable();
+                if(mFindMeBtn.getText().equals("Find me")) {
+                    setDiscoverable();
+                }
+                else{
+                    //여기다가 히스토리 다이얼로그 띄우기
+                }
+                break;
             }
-            case R.id.sendBtn: {
+            case R.id.sendBtn: { //Send 버튼을 누르면 에딧텍스트 내용을 보냄.
                 // 데이터 송수신 스레드가 생성되지 않았다면 함수 탈출
                 if (mSocketThread == null) return;
                 // 사용자가 입력한 텍스트를 소켓으로 전송한다
@@ -252,6 +375,10 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                 mEditData.setText("");
                 mSocketThread.write(strBuf);
                 break;
+            }
+            case R.id.refreshBtn: {
+                onStop();
+                onResume();
             }
         }
     }
@@ -269,6 +396,11 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
             }
         }
     };
+
+
+
+
+
 
 
 
@@ -406,6 +538,16 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
                     sendChatMsg("Receive: " + strBuf);
                     showMessage("Receive: " + strBuf);
                     SystemClock.sleep(1);
+
+                    if(strBuf.equals("준비되었습니다.")){
+                        //나는 준비 된 상황에서 상대 준비가 끝나면 게임 시작.
+                        if(ready==1){
+                            gameStart();
+                       }
+                       //나는 준비가 안 되어있는데 상대가 준비가 되면
+                       else ready=2;
+                    }
+
                 } catch (IOException e) {
                     showMessage("Socket disconneted");
                     break;
@@ -459,7 +601,7 @@ public class MainActivity extends Activity implements AdapterView.OnItemClickLis
             return;
         // 다른 디바이스에게 자신을 검색 허용 지정
         Intent intent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 10);
+        intent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 200);
         startActivity(intent);
     }
 
