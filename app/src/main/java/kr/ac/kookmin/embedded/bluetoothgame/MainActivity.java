@@ -276,8 +276,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         LinearLayout secondLayout = (LinearLayout)findViewById(R.id.secondLayout);
         final EditText mEditxtForChat = (EditText)findViewById(R.id.editxtForChat);
         Button mSendBtn = (Button)findViewById(R.id.sendBtn); //Send 버튼
-        Button mReadyBtn = (Button)findViewById(R.id.readyBtn); //Ready 버튼
-        Button mHideBtn = (Button)findViewById(R.id.hideBtn); //Hide 버튼
+        final Button mReadyBtn = (Button)findViewById(R.id.readyBtn); //Ready 버튼
+        final Button mHideBtn = (Button)findViewById(R.id.hideBtn); //Hide 버튼
         Button mStartBtn = (Button)findViewById(R.id.startBtn); //Start 버튼
         final EditText oneNum=(EditText)findViewById(R.id.oneNum); //첫번째 숫자
         final EditText twoNum=(EditText)findViewById(R.id.twoNum); //두번째 숫자
@@ -296,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         mChattingList.setAdapter(mChattingAdapter);
 
         //데이터 송수신 쓰레드 만듦
-        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter);
+        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter, this);
         mDataThrd.start();
 
 
@@ -307,9 +307,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             public void onClick(View v) {
 
                 //송수신 쓰레드가 null이면 아무 일 안함
-                if(mDataThrd==null) return;
+                if (mDataThrd == null) return;
 
-                if(mEditxtForChat.getText().length()>0){
+                if (mEditxtForChat.getText().length() > 0) {
                     mDataThrd.write(mEditxtForChat.getText().toString());
                     mEditxtForChat.setText("");
                 }
@@ -342,7 +342,24 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 else{ //준비가 되었을 때
                     Toast.makeText(getApplicationContext(), "I'm ready!", Toast.LENGTH_SHORT).show();
 
+                    //준비 되었으면 가위바위보 알림창을 띄움
+                    mDataThrd.rockPaperScissorsDialog();
+
+//                    mDataThrd.write("Are you ready?"); //turn을 정해야 하므로 Ary you ready?를 반드시 한 번은 물어봐야 함.
+
+                    mReadyBtn.setVisibility(View.GONE); //다시 숫자를 세팅 못하도록 버튼을 없애버림
+                    oneNum.setVisibility(View.GONE); //숫자 바꾸지 못하게 없애버림
+                    twoNum.setVisibility(View.GONE);
+                    threeNum.setVisibility(View.GONE);
+                    fourNum.setVisibility(View.GONE);
+//                    oneNum.setKeyListener(null); //숫자 바꾸지 못하게 막음
+//                    twoNum.setKeyListener(null);
+//                    threeNum.setKeyListener(null);
+//                    fourNum.setKeyListener(null);
+
                     number[0]=oneNum.getText().toString()+twoNum.getText().toString()+threeNum.getText().toString()+fourNum.getText().toString();
+
+                    mHideBtn.setText(number[0]); // Hide 버튼의 텍스트를 숫자로 고침
                     mDataThrd.setReady(number[0]);
 
 
@@ -354,20 +371,60 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         //Start 버튼을 누르면
         mStartBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                //내가 준비가 안 되어있을 때
-                if(mDataThrd.getReady()==null) {
-                    Toast.makeText(getApplicationContext(), "I'm not ready yet.", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                mDataThrd.write("Are you ready?");
+//                //내가 준비가 안 되어있을 때
+//                if(mDataThrd.getReady()==null) {
+//                    Toast.makeText(getApplicationContext(), "I'm not ready yet.", Toast.LENGTH_SHORT).show();
+//                    return;
+//                }
 
-                //상대가 준비가 되면
-                if(mDataThrd.askReady()==1){
-                    mDataThrd.write("Game Start!");
-                    mDataThrd.play();//게임 시작
+//                //상대가 준비가 안 되면 & 디폴트
+//                if(mDataThrd.askReady()==0) {
+//                    mDataThrd.write("Are you ready?");
+//                }
+//                //상대가 준비가 되면
+//                else if(mDataThrd.askReady()==1){
+//                    mDataThrd.write("Game Start!");
+//                    if(mDataThrd.getTurn()==1){
+//                        mDataThrd.write("It's my turn.");
+//                    }
+//                    mDataThrd.play();//게임 시작
+//                }
+            }
+        });
+
+        //Hide 버튼을 누르면 정했던 숫자와 Hide 단어를 번갈아가면서 보여줌
+        mHideBtn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if(mHideBtn.getText().toString().equals("Hide")){
+                    mHideBtn.setText(mDataThrd.getReady());
+                }
+                else{
+                    mHideBtn.setText("Hide");
                 }
             }
         });
 
     }
+
+
+//    //가위바위보 알림창
+//    private void rockPaperScissorsDialog(){
+//        final CharSequence[] rockPaperScissors= {"Rock", "Paper", "Scissors"};
+//        AlertDialog.Builder alt_bld = new AlertDialog.Builder(this);
+//        //알림창의 속성들 설정
+//        alt_bld.setTitle("Select!"); //제목
+//        alt_bld.setCancelable(false); //취소 금지
+//        alt_bld.setItems(rockPaperScissors, new DialogInterface.OnClickListener() {
+//            public void onClick(DialogInterface dialog, int which) {
+//                Toast.makeText(getApplicationContext(), rockPaperScissors[which], Toast.LENGTH_SHORT).show();
+//                String myRPS="---"+rockPaperScissors[which]+"---";
+//
+//                //내 가위바위보 결과를 보냄
+//                mDataThrd.write(myRPS);
+////                dialog.cancel();
+//            }
+//        });
+//        AlertDialog alert = alt_bld.create();
+//        alert.show();
+//    }
 }
