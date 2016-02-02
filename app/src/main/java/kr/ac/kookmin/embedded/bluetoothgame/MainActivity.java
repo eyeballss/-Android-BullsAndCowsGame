@@ -343,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     Toast.makeText(getApplicationContext(), "I'm ready!", Toast.LENGTH_SHORT).show();
 
                     //준비 되었으면 가위바위보 알림창을 띄움
-                    mDataThrd.rockPaperScissorsDialog();
+                    mDataThrd.rockPaperScissorsDialog(false);
 
 //                    mDataThrd.write("Are you ready?"); //turn을 정해야 하므로 Ary you ready?를 반드시 한 번은 물어봐야 함.
 

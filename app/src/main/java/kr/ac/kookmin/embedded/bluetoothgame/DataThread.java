@@ -117,7 +117,7 @@ public class DataThread extends Thread {
             if(opponentRPS.equals("Rock")){
                 //비겼다고 말해주기
                 showMessage("Draw!");
-                rockPaperScissorsDialog();//비겼음
+                rockPaperScissorsDialog(true);//비겼음
             }
             else if(opponentRPS.equals("Paper")){
                 turn=0;
@@ -137,7 +137,7 @@ public class DataThread extends Thread {
             else if(opponentRPS.equals("Paper")){
                 //비겼다고 말해주기
                 showMessage("Draw!");
-                rockPaperScissorsDialog();//비겼음
+                rockPaperScissorsDialog(true);//비겼음
             }
             else{
                 turn=0;
@@ -157,7 +157,7 @@ public class DataThread extends Thread {
             else{
                 //비겼다고 말해주기
                 showMessage("Draw!");
-                rockPaperScissorsDialog();//비겼음
+                rockPaperScissorsDialog(true);//비겼음
             }
         }
 
@@ -200,10 +200,14 @@ public class DataThread extends Thread {
 
     AlertDialog.Builder alt_bld;
     //가위바위보 알림창
-    public void rockPaperScissorsDialog(){
-        //초기화
-        myRPS=null;
-        opponentRPS=null;
+    public void rockPaperScissorsDialog(boolean init){
+
+        if(init){ //비겨서 초기화 해야 하면
+            //초기화
+            myRPS=null;
+            opponentRPS=null;
+        }
+
 
         final CharSequence[] rockPaperScissors= {"Rock", "Paper", "Scissors"};
         alt_bld = new AlertDialog.Builder(mMain);
