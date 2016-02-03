@@ -19,7 +19,7 @@ public class DataThread extends Thread {
 
     enum TURN {
         FIRST, SECOND
-    };
+    }
 
     private MainActivity mMain; //mainActivity
     private final BluetoothSocket mmSocket; // 클라이언트 소켓
@@ -28,19 +28,19 @@ public class DataThread extends Thread {
     private ArrayAdapter<String> mChattingAdapter; //채팅창 어댑터
     private ArrayAdapter<String> mHistoryAdapter; //게임 결과창 어댑터
     private TextView mStatusMsg; //상태 메세지
-    private String number =null; //null이면 내가 준비 아직 안 됨. 값이 있으면 내가 준비 끝남
+    private String myNumber = null; //null이면 내가 준비 아직 안 됨. 값이 있으면 내가 준비 끝남
     //    private int ready=0; //상대가 준비가 되었는지 확인. 0이면 아직 1이면 준비 됨. 2면 게임함
-    private int turn=-1; //-1이면 초기값. 0이면 상대턴 1이면 내 턴
+    private int turn = -1; //-1이면 초기값. 0이면 상대턴 1이면 내 턴
 
     private String myRPS = null; //내가 고른 가위바위보
-    private String opponentRPS =null; //상대 가위바위보 결과
+    private String opponentRPS = null; //상대 가위바위보 결과
 
     public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, MainActivity mainActivity) {
         this.mHistoryAdapter = mHistoryAdapter;
         this.mStatusMsg = mStatusMsg;
         this.mMain = mainActivity;
         mmSocket = socket;
-        this.mChattingAdapter=mChattingAdapter;
+        this.mChattingAdapter = mChattingAdapter;
 
         // 입력 스트림과 출력 스트림을 구한다
         try {
@@ -62,22 +62,38 @@ public class DataThread extends Thread {
                 bytes = mmInStream.read(buffer);
                 String strBuf = new String(buffer, 0, bytes);
 
-//                if(strBuf.startsWith("=") && strBuf.endsWith("=")){//=로 시작하고 끝나면 질문인지 의심
-//                    if(gameQuestion(strBuf)){//정식 질문이면
-//
-//                        mmOutStream.write(makeResult(strBuf));
-//
-//                        continue;
-//                    }
-//                }
+                if (turn!=-1 && strBuf.length()==10 && strBuf.substring(0, 5).equals("throw") && strBuf.endsWith("!")) {//상대가 던지는 질문은
+                    String result = computeBall(strBuf);
+                    mmOutStream.write(result.getBytes());//계산한 결과를 돌려줌
+                    turn = 1; //돌려줬으니 내 턴이 됨
+                    if(result.indexOf("4 strike 0 ball!")>-1){ //내가 지는 스트라이크 4 나온 경우
+                        sendGameResultMsg("Opponent's throw : "+myNumber);
+                        setReady(null); //myNumber를 null로 고침.
+                        turn=-1;
+                        showMessage("I lose!");
+                    }
+                    else showMessage("My turn!");
+                    continue;
+                }
+                if(strBuf.length()>10 && turn==1 && strBuf.substring(0,6).equals("return") && strBuf.endsWith("!")){//상대가 계산한 결과를 받음
+                    sendGameResultMsg(strBuf.substring(6)); //나한테만 올려주면 됨.
+                    turn=0; //결과를 받았으니 턴이 종료
+                    if(strBuf.indexOf("4 strike 0 ball!")>-1){ //내가 이기는 스트라이크 4 나온 경우
+                        setReady(null); //myNumber를 null로 고침
+                        turn=-1;
+                        showMessage("I win!");
+                    }
+                    else showMessage("Opponent turn!");
+                    continue;
+                }
 
-                if(strBuf.startsWith("-") && strBuf.endsWith("-")){//-로 시작하고 끝나면 가위바위보인지 의심
-                    String temp = strBuf.replaceAll("-","");
-                    if(temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")){
-                        opponentRPS=temp;
+                if (strBuf.length()>=2 && strBuf.startsWith("-") && strBuf.endsWith("-")) {//-로 시작하고 끝나면 가위바위보인지 의심
+                    String temp = strBuf.replaceAll("-", "");
+                    if (temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")) {
+                        opponentRPS = temp;
 
                         //상대도 정했고 나도 정했으면
-                        if(myRPS!=null){
+                        if (myRPS != null) {
                             whoIsWinner(myRPS, opponentRPS);
                         }
                         continue;
@@ -112,14 +128,14 @@ public class DataThread extends Thread {
 //            }
 
             //가위바위보 결과는 보내지 않음
-            if(strBuf.startsWith("-") && strBuf.endsWith("-")) { //-로 시작하고 끝나는 입력이 들어오면 가위바위보 결과일지도 모름
+            if (strBuf.length()>=2 && strBuf.startsWith("-") && strBuf.endsWith("-")) { //-로 시작하고 끝나는 입력이 들어오면 가위바위보 결과일지도 모름
                 String temp = strBuf.replaceAll("-", "");
-                if (temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")){
+                if (temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")) {
                     myRPS = temp; //내 가위바위보 저장
 
                     mmOutStream.write(buffer);//내 가위바위보 보냄
                     //나도 정했고 상대도 정했으면
-                    if(opponentRPS!=null){
+                    if (opponentRPS != null) {
                         whoIsWinner(myRPS, opponentRPS);
                     }
 
@@ -168,53 +184,84 @@ public class DataThread extends Thread {
 ////            questionNums.add(String.valueOf(question.charAt(i)));
 //    }
 
+    //내가 상대에게 공을 던짐
+    public void throwBall(String ball) {
+        try {
+            mmOutStream.write(("throw" + ball + "!").getBytes());
+        } catch (Exception e) {
+            showMessage("Throw ball error");
+        }
+    }
+
+    //상대가 던진 공을 내 것과 계산. 그래서 결과를 반환
+    private String computeBall(String ballFromOpponent) {
+        ballFromOpponent = ballFromOpponent.substring(5, ballFromOpponent.length()-1);
+
+        String result = " : "; //결과가 될 녀석
+
+        int strike = 0;
+        int ball = 0;
+        int out = 0;
+
+        for (int i = 0; i < 4; i++) {
+            // i번째 내 번호와 상대 넘버가 같은 경우 스트라이크
+            if (String.valueOf(myNumber.charAt(i)).equals(String.valueOf(ballFromOpponent.charAt(i)))) {
+                strike++;
+            }
+            // 상대 넘버가 내 번호에 있을 경우 볼
+            else if (myNumber.indexOf(String.valueOf(ballFromOpponent.charAt(i))) >= 0) {
+                ball++;
+            }
+            //이도 저도 아닌 경우 아웃
+            else out++;
+        }
+
+        if(out==4) result+="out!"; //out인 경우
+        else result += strike+" strike " +ball+" ball!";
+
+        return "return"+ballFromOpponent + result;
+    }
 
     //가위바위보 계산
     private void whoIsWinner(String myRPS, String opponentRPS) {
 
         //내가 바위일 때
-        if(myRPS.equals("Rock")){
-            if(opponentRPS.equals("Rock")){
+        if (myRPS.equals("Rock")) {
+            if (opponentRPS.equals("Rock")) {
                 //비겼다고 말해주기
                 showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
-            }
-            else if(opponentRPS.equals("Paper")){
-                turn=0;
+            } else if (opponentRPS.equals("Paper")) {
+                turn = 0;
                 showMessage("I'm lose.. It's not my turn.");
-            }
-            else{
-                turn=1;
+            } else {
+                turn = 1;
                 showMessage("I'm win! It's my turn!");
             }
         }
         //내가 보일 때
-        else if(myRPS.equals("Paper")){
-            if(opponentRPS.equals("Rock")){
-                turn=1;
+        else if (myRPS.equals("Paper")) {
+            if (opponentRPS.equals("Rock")) {
+                turn = 1;
                 showMessage("I'm win! It's my turn!");
-            }
-            else if(opponentRPS.equals("Paper")){
+            } else if (opponentRPS.equals("Paper")) {
                 //비겼다고 말해주기
                 showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
-            }
-            else{
-                turn=0;
+            } else {
+                turn = 0;
                 showMessage("I'm lose.. It's not my turn.");
             }
         }
         //내가 가위일 때
         else {
-            if(opponentRPS.equals("Rock")){
-                turn=0;
+            if (opponentRPS.equals("Rock")) {
+                turn = 0;
                 showMessage("I'm lose.. It's not my turn.");
-            }
-            else if(opponentRPS.equals("Paper")){
-                turn=1;
+            } else if (opponentRPS.equals("Paper")) {
+                turn = 1;
                 showMessage("I'm win! It's my turn!");
-            }
-            else{
+            } else {
                 //비겼다고 말해주기
                 showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
@@ -225,14 +272,21 @@ public class DataThread extends Thread {
 
 
     //준비 상황을 보여줌.
-    public String getReady(){
-        return number;
+    public String getReady() {
+        return myNumber;
     }
 
     //내 상태를 저장
-    public void setReady(String ready){
-        number=ready;
+    public void setReady(String ready) {
+        myNumber = ready;
     }
+
+    //턴 확인. false이면 상대턴. true이면 내 턴
+    public boolean checkTurn() {
+        if (turn == 1) return true;
+        else return false;
+    }
+
 
 //    //내 가위바위보를 저장
 //    public void setMyRPS(String myRPS){
@@ -255,20 +309,18 @@ public class DataThread extends Thread {
 //    }
 
 
-
-
-
     AlertDialog.Builder alt_bld;
-    //가위바위보 알림창
-    public void rockPaperScissorsDialog(boolean init){
 
-        if(init){ //비겨서 초기화 해야 하면
+    //가위바위보 알림창
+    public void rockPaperScissorsDialog(boolean init) {
+
+        if (init) { //비겨서 초기화 해야 하면
             //초기화
-            myRPS=null;
-            opponentRPS=null;
+            myRPS = null;
+            opponentRPS = null;
         }
 
-        final CharSequence[] rockPaperScissors= {"Rock", "Paper", "Scissors"};
+        final CharSequence[] rockPaperScissors = {"Rock", "Paper", "Scissors"};
         alt_bld = new AlertDialog.Builder(mMain);
         //알림창의 속성들 설정
         alt_bld.setTitle("Select!"); //제목
@@ -288,11 +340,12 @@ public class DataThread extends Thread {
 
 
     //비겼을 때
-    public void doAgain(String chatMsg){
+    public void doAgain(String chatMsg) {
         Message msg = Message.obtain(mReplayHdr, 0, chatMsg);
         mReplayHdr.sendMessage(msg);
         Log.d("Log", "Chatting contents : " + chatMsg);
     }
+
     Handler mReplayHdr = new Handler() {
         public void handleMessage(Message msg) {
             if (msg.what == 0) {
@@ -303,16 +356,13 @@ public class DataThread extends Thread {
     };
 
 
-
-
-
-
-    //상대 질문에 대한 결과 메세지를 리스트뷰에 올림
-    public void sendGameResultMsg(String resultMsg){
+    //상대 질문에 대한 결과 메세지를 리스트뷰에 올림. 히스토리 리스트
+    public void sendGameResultMsg(String resultMsg) {
         Message msg = Message.obtain(mChatHdr, 0, resultMsg);
         mGameResultHdr.sendMessage(msg);
-        Log.d("Log", "Game result : "+ resultMsg);
+        Log.d("Log", "Game result : " + resultMsg);
     }
+
     // 메시지 화면 출력을 위한 핸들러
     Handler mGameResultHdr = new Handler() {
         public void handleMessage(Message msg) {
@@ -325,15 +375,13 @@ public class DataThread extends Thread {
     };
 
 
-
-
-
     //채팅 메세지를 리스트뷰에 올림
-    public void sendChatMsg(String chatMsg){
+    public void sendChatMsg(String chatMsg) {
         Message msg = Message.obtain(mChatHdr, 0, chatMsg);
         mChatHdr.sendMessage(msg);
-        Log.d("Log", "Chatting contents : "+ chatMsg);
+        Log.d("Log", "Chatting contents : " + chatMsg);
     }
+
     // 메시지 화면 출력을 위한 핸들러
     Handler mChatHdr = new Handler() {
         public void handleMessage(Message msg) {
@@ -353,6 +401,7 @@ public class DataThread extends Thread {
         mHandler.sendMessage(msg);
         Log.d("Log", strMsg);
     }
+
     // 메시지 화면 출력을 위한 핸들러
     Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
