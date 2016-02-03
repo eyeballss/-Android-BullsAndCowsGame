@@ -1,4 +1,5 @@
 package kr.ac.kookmin.embedded.bluetoothgame;
+
 import android.app.AlertDialog;
 import android.bluetooth.BluetoothSocket;
 import android.content.DialogInterface;
@@ -25,6 +26,7 @@ public class DataThread extends Thread {
     private InputStream mmInStream; // 입력 스트림
     private OutputStream mmOutStream; // 출력 스트림
     private ArrayAdapter<String> mChattingAdapter; //채팅창 어댑터
+    private ArrayAdapter<String> mHistoryAdapter; //게임 결과창 어댑터
     private TextView mStatusMsg; //상태 메세지
     private String number =null; //null이면 내가 준비 아직 안 됨. 값이 있으면 내가 준비 끝남
     //    private int ready=0; //상대가 준비가 되었는지 확인. 0이면 아직 1이면 준비 됨. 2면 게임함
@@ -33,7 +35,8 @@ public class DataThread extends Thread {
     private String myRPS = null; //내가 고른 가위바위보
     private String opponentRPS =null; //상대 가위바위보 결과
 
-    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, MainActivity mainActivity) {
+    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, MainActivity mainActivity) {
+        this.mHistoryAdapter = mHistoryAdapter;
         this.mStatusMsg = mStatusMsg;
         this.mMain = mainActivity;
         mmSocket = socket;
@@ -59,7 +62,16 @@ public class DataThread extends Thread {
                 bytes = mmInStream.read(buffer);
                 String strBuf = new String(buffer, 0, bytes);
 
-                if(strBuf.startsWith("-")){//-로 시작하면 가위바위보인지 의심
+//                if(strBuf.startsWith("=") && strBuf.endsWith("=")){//=로 시작하고 끝나면 질문인지 의심
+//                    if(gameQuestion(strBuf)){//정식 질문이면
+//
+//                        mmOutStream.write(makeResult(strBuf));
+//
+//                        continue;
+//                    }
+//                }
+
+                if(strBuf.startsWith("-") && strBuf.endsWith("-")){//-로 시작하고 끝나면 가위바위보인지 의심
                     String temp = strBuf.replaceAll("-","");
                     if(temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")){
                         opponentRPS=temp;
@@ -71,6 +83,8 @@ public class DataThread extends Thread {
                         continue;
                     }
                 }
+//                if(strBuf.endsWith("?")) {//?로 끝나면 묻는 걸로 의심
+//                }
                 sendChatMsg("Receive: " + strBuf);
                 showMessage("Receive: " + strBuf);
                 SystemClock.sleep(1);
@@ -87,14 +101,23 @@ public class DataThread extends Thread {
         try {
             // 출력 스트림에 데이터를 저장한다
             byte[] buffer = strBuf.getBytes();
-            mmOutStream.write(buffer);
+
+
+//            if(strBuf.endsWith("?")) {//?로 끝나는 입력이 들어오면 질문일지도 모름
+//                if(gameQuestion(strBuf)) { //질문인지 확인해서 맞으면 OutStream으로 보냄
+//                    //true가 나오면 정식 질문이므로 return. false가 나오면 정식 질문이 아니므로 채팅창에 올림
+//                    mmOutStream.write(("="+strBuf+"=").getBytes()); //=을 붙여서 보냄
+//                    return;
+//                }
+//            }
 
             //가위바위보 결과는 보내지 않음
-            if(strBuf.startsWith("-")) { //-로 시작하는 입력이 들어오면 가위바위보 결과일지도 모름
+            if(strBuf.startsWith("-") && strBuf.endsWith("-")) { //-로 시작하고 끝나는 입력이 들어오면 가위바위보 결과일지도 모름
                 String temp = strBuf.replaceAll("-", "");
                 if (temp.equals("Rock") || temp.equals("Paper") || temp.equals("Scissors")){
                     myRPS = temp; //내 가위바위보 저장
 
+                    mmOutStream.write(buffer);//내 가위바위보 보냄
                     //나도 정했고 상대도 정했으면
                     if(opponentRPS!=null){
                         whoIsWinner(myRPS, opponentRPS);
@@ -103,6 +126,8 @@ public class DataThread extends Thread {
                     return;
                 }
             }
+            mmOutStream.write(buffer);//일반 문자 보냄
+
             sendChatMsg("Send: " + strBuf);
             showMessage("Send: " + strBuf);
         } catch (IOException e) {
@@ -110,6 +135,41 @@ public class DataThread extends Thread {
         }
     }
 
+//    //질문이 정식 질문인지 확인
+//    private boolean gameQuestion(String question) {
+//        question=question.replaceAll("'?'","").replaceAll("=","");
+//
+//        if(question.length()!=4) return false; //질문한 숫자가 4개가 아닐 때 리턴
+//
+//        try{
+//            if(1234>Integer.parseInt(question) && Integer.parseInt(question)>9876)
+//                return false; //질문한 숫자가 범위를 넘어가면 리턴
+//        }
+//        catch (Exception e){
+//            return false; //quiestion이 숫자가 아니라서 Integer.parseInt 할 수 없다면 리턴
+//        }
+//
+//        //해쉬셋 넣어야 함!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//
+//
+//        return true; //정식 질문임
+////        try{
+////            //암호화해서 보냄
+////
+////            return true;
+////        }
+////        catch (Exception e){
+////            showMessage("Question send error");
+////            return false;
+////        }
+//
+////        HashSet<String> questionNums = new HashSet<String>();
+////        for(int i=0; i<question.length(); i++)
+////            questionNums.add(String.valueOf(question.charAt(i)));
+//    }
+
+
+    //가위바위보 계산
     private void whoIsWinner(String myRPS, String opponentRPS) {
 
         //내가 바위일 때
@@ -208,7 +268,6 @@ public class DataThread extends Thread {
             opponentRPS=null;
         }
 
-
         final CharSequence[] rockPaperScissors= {"Rock", "Paper", "Scissors"};
         alt_bld = new AlertDialog.Builder(mMain);
         //알림창의 속성들 설정
@@ -217,10 +276,10 @@ public class DataThread extends Thread {
         alt_bld.setItems(rockPaperScissors, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int which) {
                 Toast.makeText(mMain, rockPaperScissors[which], Toast.LENGTH_SHORT).show();
-                String myRPS = "---" + rockPaperScissors[which] + "---";
+                String myRPSTemp = "-" + rockPaperScissors[which] + "-";
 
-                //내 가위바위보 결과를 보냄
-                write(myRPS);
+                write(myRPSTemp);
+
 //                dialog.cancel();
             }
         });
@@ -228,7 +287,7 @@ public class DataThread extends Thread {
     }
 
 
-
+    //비겼을 때
     public void doAgain(String chatMsg){
         Message msg = Message.obtain(mReplayHdr, 0, chatMsg);
         mReplayHdr.sendMessage(msg);
@@ -239,6 +298,28 @@ public class DataThread extends Thread {
             if (msg.what == 0) {
                 AlertDialog alert = alt_bld.create();
                 alert.show();
+            }
+        }
+    };
+
+
+
+
+
+
+    //상대 질문에 대한 결과 메세지를 리스트뷰에 올림
+    public void sendGameResultMsg(String resultMsg){
+        Message msg = Message.obtain(mChatHdr, 0, resultMsg);
+        mGameResultHdr.sendMessage(msg);
+        Log.d("Log", "Game result : "+ resultMsg);
+    }
+    // 메시지 화면 출력을 위한 핸들러
+    Handler mGameResultHdr = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                String chatMsg = (String) msg.obj;
+                mHistoryAdapter.add(chatMsg);
+                mHistoryAdapter.notifyDataSetChanged();
             }
         }
     };
