@@ -10,11 +10,14 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -277,7 +280,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         final EditText mEditxtForChat = (EditText)findViewById(R.id.editxtForChat);
         Button mSendBtn = (Button)findViewById(R.id.sendBtn); //Send 버튼
         final Button mReadyBtn = (Button)findViewById(R.id.readyBtn); //Ready 버튼
-        final Button mHideBtn = (Button)findViewById(R.id.hideBtn); //Hide 버튼
+        final Button mHideBtn = (Button) findViewById(R.id.hideBtn); //Hide 버튼
         Button mStartBtn = (Button)findViewById(R.id.startBtn); //Start 버튼
         final EditText oneNum=(EditText)findViewById(R.id.oneNum); //첫번째 숫자
         final EditText twoNum=(EditText)findViewById(R.id.twoNum); //두번째 숫자
@@ -285,6 +288,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         final EditText fourNum=(EditText)findViewById(R.id.fourNum); //네번째 숫자
         final String[] number = new String[1]; //자기가 정한 숫자
 
+        //야구공 움직여서 정답판 움직이기
+        final EditText mAnswerTxt = (EditText)findViewById(R.id.answerTxt);
+        ImageView mBallImg = (ImageView)findViewById(R.id.ballImg);
 
         //visibility를 바꿈. 이제 secondLayer 위에서 놀게 됨.
         firstLayout.setVisibility(View.GONE);
@@ -292,11 +298,13 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
         //채팅 리스트 객체 만들고 어댑터 적용
         ListView mChattingList = (ListView)findViewById(R.id.chattingList);
+        ListView mHistoryList = (ListView)findViewById(R.id.historyList);
         final ArrayAdapter<String> mChattingAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1);
+        final ArrayAdapter<String> mHistoryAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1);
         mChattingList.setAdapter(mChattingAdapter);
-
+        mHistoryList.setAdapter(mHistoryAdapter);
         //데이터 송수신 쓰레드 만듦
-        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter, this);
+        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter, mHistoryAdapter, this);
         mDataThrd.start();
 
 
@@ -321,8 +329,8 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             public void onClick(View v) {
 
                 //숫자를 다 안 넣었을 때
-                if(oneNum.getText().toString().equals("") || twoNum.getText().toString().equals("") ||
-                        threeNum.getText().toString().equals("") || fourNum.getText().toString().equals("")){
+                if (oneNum.getText().toString().equals("") || twoNum.getText().toString().equals("") ||
+                        threeNum.getText().toString().equals("") || fourNum.getText().toString().equals("")) {
                     Toast.makeText(getApplicationContext(), "Fill all numbers.", Toast.LENGTH_SHORT).show();
                     mDataThrd.setReady(null);
                     return;
@@ -334,12 +342,11 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                 numbers.add(Integer.parseInt(threeNum.getText().toString()));
                 numbers.add(Integer.parseInt(fourNum.getText().toString()));
 
-                if(numbers.size()!=4){ //중복된 숫자가 들어갔을 때
+                if (numbers.size() != 4) { //중복된 숫자가 들어갔을 때
                     Toast.makeText(getApplicationContext(), "You have to use different numbers each other.", Toast.LENGTH_SHORT).show();
                     mDataThrd.setReady(null);
                     return;
-                }
-                else{ //준비가 되었을 때
+                } else { //준비가 되었을 때
                     Toast.makeText(getApplicationContext(), "I'm ready!", Toast.LENGTH_SHORT).show();
 
                     //준비 되었으면 가위바위보 알림창을 띄움
@@ -357,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 //                    threeNum.setKeyListener(null);
 //                    fourNum.setKeyListener(null);
 
-                    number[0]=oneNum.getText().toString()+twoNum.getText().toString()+threeNum.getText().toString()+fourNum.getText().toString();
+                    number[0] = oneNum.getText().toString() + twoNum.getText().toString() + threeNum.getText().toString() + fourNum.getText().toString();
 
                     mHideBtn.setText(number[0]); // Hide 버튼의 텍스트를 숫자로 고침
                     mDataThrd.setReady(number[0]);
@@ -395,14 +402,96 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         //Hide 버튼을 누르면 정했던 숫자와 Hide 단어를 번갈아가면서 보여줌
         mHideBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(mHideBtn.getText().toString().equals("Hide")){
+                if (mHideBtn.getText().toString().equals("Hide")) {
                     mHideBtn.setText(mDataThrd.getReady());
-                }
-                else{
+                } else {
                     mHideBtn.setText("Hide");
                 }
             }
         });
+
+
+        final HashSet<String> answerNumSet = new HashSet<String>();
+        //Send 버튼 클릭 리스너 다시 만듦
+        mSendBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                //채팅 먼저 처리함
+                //송수신 쓰레드가 null이면 아무 일 안함
+                if (mDataThrd == null) return;
+
+                if (mEditxtForChat.getText().length() > 0) {
+                    mDataThrd.write(mEditxtForChat.getText().toString());
+                    mEditxtForChat.setText("");
+                }
+
+                //내 턴이고 정답판에 뭔가 있을 때
+                if(mAnswerTxt.getText().length()>0 && mDataThrd.checkTurn()){
+                    //정답판 판독
+                    for(int i=0; i<mAnswerTxt.length(); i++){
+                        answerNumSet.add(String.valueOf(mAnswerTxt.getText().charAt(i)));
+                    }
+                    if(answerNumSet.size()!=4){
+                        Toast.makeText(getApplicationContext(), "Try correct numbers : "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                    }
+                    else{
+                        mDataThrd.throwBall(String.valueOf(mAnswerTxt.getText())); //mDataThrd로 넘겨서 게임 확인
+                        Toast.makeText(getApplicationContext(), mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                        mAnswerTxt.setText("");
+                    }
+                    answerNumSet.clear(); //셋을 정리해준다.
+                }
+
+            }
+        });
+
+
+
+
+        //야구공 움직여서 정답판 움직이기
+        mAnswerTxt.setVisibility(View.VISIBLE);
+        mBallImg.setVisibility(View.VISIBLE);
+        mAnswerTxt.bringToFront();
+
+        //움직이는 리스너
+        mBallImg.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent event) {
+//                if (currentState != State.EDIT_MOVE) return false;
+
+                FrameLayout.LayoutParams imgParams = (FrameLayout.LayoutParams) view.getLayoutParams();
+                FrameLayout.LayoutParams txtParams = (FrameLayout.LayoutParams) mAnswerTxt.getLayoutParams();
+                if (view.getId() != R.id.ballImg) return false;
+
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_MOVE:
+                        imgParams.topMargin = (int) event.getRawY() - view.getHeight() - 50;
+                        imgParams.leftMargin = (int) event.getRawX() - (view.getWidth() / 2) - 50;
+                        view.setLayoutParams(imgParams);
+                        txtParams.topMargin = (int) event.getRawY() - mAnswerTxt.getHeight() - 50 - 50;
+                        txtParams.leftMargin = (int) event.getRawX() - (mAnswerTxt.getWidth() / 2) - 50;
+                        mAnswerTxt.setLayoutParams(txtParams);
+                        break;
+
+                    case MotionEvent.ACTION_UP:
+                        imgParams.topMargin = (int) event.getRawY() - view.getHeight() - 50;
+                        imgParams.leftMargin = (int) event.getRawX() - (view.getWidth() / 2) - 50;
+                        view.setLayoutParams(imgParams);
+                        txtParams.topMargin = (int) event.getRawY() - mAnswerTxt.getHeight() - 50 - 50;
+                        txtParams.leftMargin = (int) event.getRawX() - (mAnswerTxt.getWidth() / 2) - 50;
+                        mAnswerTxt.setLayoutParams(txtParams);
+                        break;
+
+//                    case MotionEvent.ACTION_DOWN:
+//                        view.setLayoutParams(imgParams);
+//                        mAnswerTxt.setLayoutParams(txtParams);
+//                        break;
+                }
+
+                return true;
+            }
+        }); //여기까지 야구공 움직이기
 
     }
 
