@@ -75,6 +75,7 @@ public class DataThread extends Thread {
                     else showMessage("My turn!");
                     continue;
                 }
+                
                 if(strBuf.length()>10 && turn==1 && strBuf.substring(0,6).equals("return") && strBuf.endsWith("!")){//상대가 계산한 결과를 받음
                     sendGameResultMsg(strBuf.substring(6)); //나한테만 올려주면 됨.
                     turn=0; //결과를 받았으니 턴이 종료
