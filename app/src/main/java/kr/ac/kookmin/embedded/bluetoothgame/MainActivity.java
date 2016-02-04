@@ -10,6 +10,7 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -299,30 +300,32 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         //채팅 리스트 객체 만들고 어댑터 적용
         ListView mChattingList = (ListView)findViewById(R.id.chattingList);
         ListView mHistoryList = (ListView)findViewById(R.id.historyList);
-        final ArrayAdapter<String> mChattingAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1);
-        final ArrayAdapter<String> mHistoryAdapter = new ArrayAdapter<String>(getApplicationContext(), android.R.layout.simple_list_item_1);
+        final ArrayAdapter<String> mChattingAdapter = new ArrayAdapter<String>(getApplicationContext(), R.layout.list_items);
+        final ArrayAdapter<String> mHistoryAdapter = new ArrayAdapter<String>(getApplicationContext(), R.layout.list_items);
         mChattingList.setAdapter(mChattingAdapter);
         mHistoryList.setAdapter(mHistoryAdapter);
+        //내 턴인걸 알리는 말풍선
+        ImageView mSpeechBubbleImg = (ImageView)findViewById(R.id.speechBubbleImg);
         //데이터 송수신 쓰레드 만듦
-        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter, mHistoryAdapter, this);
+        mDataThrd = new DataThread(socket, mStatusMsg, mChattingAdapter, mHistoryAdapter, this, mSpeechBubbleImg);
         mDataThrd.start();
 
 
 
 
-        //send 버튼을 누르면
-        mSendBtn.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-
-                //송수신 쓰레드가 null이면 아무 일 안함
-                if (mDataThrd == null) return;
-
-                if (mEditxtForChat.getText().length() > 0) {
-                    mDataThrd.write(mEditxtForChat.getText().toString());
-                    mEditxtForChat.setText("");
-                }
-            }
-        });
+//        //send 버튼을 누르면
+//        mSendBtn.setOnClickListener(new View.OnClickListener() {
+//            public void onClick(View v) {
+//
+//                //송수신 쓰레드가 null이면 아무 일 안함
+//                if (mDataThrd == null) return;
+//
+//                if (mEditxtForChat.getText().length() > 0) {
+//                    mDataThrd.write(mEditxtForChat.getText().toString());
+//                    mEditxtForChat.setText("");
+//                }
+//            }
+//        });
 
         //Ready 버튼을 누르면
         mReadyBtn.setOnClickListener(new View.OnClickListener() {
@@ -351,8 +354,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 
                     //준비 되었으면 가위바위보 알림창을 띄움
                     mDataThrd.rockPaperScissorsDialog(false);
-
-//                    mDataThrd.write("Are you ready?"); //turn을 정해야 하므로 Ary you ready?를 반드시 한 번은 물어봐야 함.
 
                     mReadyBtn.setVisibility(View.GONE); //다시 숫자를 세팅 못하도록 버튼을 없애버림
                     oneNum.setVisibility(View.GONE); //숫자 바꾸지 못하게 없애버림
@@ -410,8 +411,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         });
 
-
-        final HashSet<String> answerNumSet = new HashSet<String>();
         //Send 버튼 클릭 리스너 다시 만듦
         mSendBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -426,22 +425,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                     mEditxtForChat.setText("");
                 }
 
-                //내 턴이고 정답판에 뭔가 있을 때
-                if(mAnswerTxt.getText().length()>0 && mDataThrd.checkTurn()){
-                    //정답판 판독
-                    for(int i=0; i<mAnswerTxt.length(); i++){
-                        answerNumSet.add(String.valueOf(mAnswerTxt.getText().charAt(i)));
-                    }
-                    if(answerNumSet.size()!=4){
-                        Toast.makeText(getApplicationContext(), "Try correct numbers : "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
-                    }
-                    else{
-                        mDataThrd.throwBall(String.valueOf(mAnswerTxt.getText())); //mDataThrd로 넘겨서 게임 확인
-                        Toast.makeText(getApplicationContext(), mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
-                        mAnswerTxt.setText("");
-                    }
-                    answerNumSet.clear(); //셋을 정리해준다.
-                }
+                //--//
 
             }
         });
@@ -493,6 +477,35 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         }); //여기까지 야구공 움직이기
 
+        final HashSet<String> answerNumSet = new HashSet<String>();
+        //정답판에서 엔터키로 바로 보내기
+        mAnswerTxt.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+
+
+                    //내 턴이고 정답판에 뭔가 있을 때
+                    if(mAnswerTxt.getText().length()>0 && mDataThrd.checkTurn()){
+                        //정답판 판독
+                        for(int i=0; i<mAnswerTxt.length(); i++){
+                            answerNumSet.add(String.valueOf(mAnswerTxt.getText().charAt(i)));
+                        }
+                        if(answerNumSet.size()!=4){
+                            Toast.makeText(getApplicationContext(), "Try correct numbers : "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                        }
+                        else{
+                            mDataThrd.throwBall(String.valueOf(mAnswerTxt.getText())); //mDataThrd로 넘겨서 게임 확인
+                            Toast.makeText(getApplicationContext(), "throw "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                            mAnswerTxt.setText("");
+                        }
+                        answerNumSet.clear(); //셋을 정리해준다.
+                    }
+
+                }
+                return false;
+            }
+        });
     }
 
 

@@ -7,7 +7,9 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.SystemClock;
 import android.util.Log;
+import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -35,12 +37,15 @@ public class DataThread extends Thread {
     private String myRPS = null; //내가 고른 가위바위보
     private String opponentRPS = null; //상대 가위바위보 결과
 
-    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, MainActivity mainActivity) {
+    private ImageView mSpeechBubbleImg; //턴을 알려주는 말풍선 그림
+
+    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, MainActivity mainActivity, ImageView mSpeechBubbleImg) {
         this.mHistoryAdapter = mHistoryAdapter;
         this.mStatusMsg = mStatusMsg;
         this.mMain = mainActivity;
         mmSocket = socket;
         this.mChattingAdapter = mChattingAdapter;
+        this.mSpeechBubbleImg = mSpeechBubbleImg;
 
         // 입력 스트림과 출력 스트림을 구한다
         try {
@@ -66,22 +71,34 @@ public class DataThread extends Thread {
                     String result = computeBall(strBuf);
                     mmOutStream.write(result.getBytes());//계산한 결과를 돌려줌
                     turn = 1; //돌려줬으니 내 턴이 됨
+                    changeSpeechBubble(true); //말풍선으로 알려줌.
+                    sendToastMsg("My turn");
+//                    Toast.makeText(mMain, "My turn", Toast.LENGTH_SHORT).show(); //토스트로 알려줌
+
                     if(result.indexOf("4 strike 0 ball!")>-1){ //내가 지는 스트라이크 4 나온 경우
                         sendGameResultMsg("Opponent's throw : "+myNumber);
                         setReady(null); //myNumber를 null로 고침.
                         turn=-1;
+                        changeSpeechBubble(false); //말풍선으로 알려줌.
                         showMessage("I lose!");
                     }
-                    else showMessage("My turn!");
+                    else {
+                        showMessage("My turn!");
+
+                    }
                     continue;
                 }
-                
+
                 if(strBuf.length()>10 && turn==1 && strBuf.substring(0,6).equals("return") && strBuf.endsWith("!")){//상대가 계산한 결과를 받음
                     sendGameResultMsg(strBuf.substring(6)); //나한테만 올려주면 됨.
                     turn=0; //결과를 받았으니 턴이 종료
+                    changeSpeechBubble(false); //말풍선으로 알려줌.
+//                    Toast.makeText(mMain, "Opponent turn", Toast.LENGTH_SHORT).show(); //토스트로 알려줌
+
                     if(strBuf.indexOf("4 strike 0 ball!")>-1){ //내가 이기는 스트라이크 4 나온 경우
                         setReady(null); //myNumber를 null로 고침
                         turn=-1;
+                        changeSpeechBubble(true); //말풍선으로 알려줌.
                         showMessage("I win!");
                     }
                     else showMessage("Opponent turn!");
@@ -230,43 +247,61 @@ public class DataThread extends Thread {
         if (myRPS.equals("Rock")) {
             if (opponentRPS.equals("Rock")) {
                 //비겼다고 말해주기
-                showMessage("Draw!");
+//                showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
             } else if (opponentRPS.equals("Paper")) {
                 turn = 0;
-                showMessage("I'm lose.. It's not my turn.");
+//                showMessage("I lose.. It's not my turn.");
             } else {
                 turn = 1;
-                showMessage("I'm win! It's my turn!");
+//                showMessage("I win! It's my turn!");
             }
         }
         //내가 보일 때
         else if (myRPS.equals("Paper")) {
             if (opponentRPS.equals("Rock")) {
                 turn = 1;
-                showMessage("I'm win! It's my turn!");
+//                showMessage("I win! It's my turn!");
             } else if (opponentRPS.equals("Paper")) {
                 //비겼다고 말해주기
-                showMessage("Draw!");
+//                showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
             } else {
                 turn = 0;
-                showMessage("I'm lose.. It's not my turn.");
+//                showMessage("I lose.. It's not my turn.");
             }
         }
         //내가 가위일 때
         else {
             if (opponentRPS.equals("Rock")) {
                 turn = 0;
-                showMessage("I'm lose.. It's not my turn.");
+//                showMessage("I lose.. It's not my turn.");
             } else if (opponentRPS.equals("Paper")) {
                 turn = 1;
-                showMessage("I'm win! It's my turn!");
+//                showMessage("I win! It's my turn!");
             } else {
                 //비겼다고 말해주기
-                showMessage("Draw!");
+//                showMessage("Draw!");
                 rockPaperScissorsDialog(true);//비겼음
             }
+        }
+
+        if(turn==1) {
+            showMessage("I win! It's my turn!");
+            changeSpeechBubble(true); //이긴 경우에만 말풍선 보이기
+            sendToastMsg("My turn");
+//            Toast.makeText(mMain, "My turn", Toast.LENGTH_SHORT).show(); //토스트로 알려줌
+        }
+        else if(turn==0){
+            showMessage("I lose.. It's not my turn.");
+            changeSpeechBubble(false);//진 경우엔 말풍선 숨기기
+            sendToastMsg("Opponent turn");
+//            Toast.makeText(mMain, "Opponent turn", Toast.LENGTH_SHORT).show(); //토스트로 알려줌
+        }
+        else{
+            showMessage("Draw!");
+            sendToastMsg("Draw!");
+//            Toast.makeText(mMain, "Draw!", Toast.LENGTH_SHORT).show(); //토스트로 알려줌
         }
 
     }
@@ -412,5 +447,51 @@ public class DataThread extends Thread {
             }
         }
     };
+
+    // 토스트 출력
+    public void sendToastMsg(String strMsg) {
+        // 메시지 텍스트를 핸들러에 전달
+        Message msg = Message.obtain(mToastHandler, 0, strMsg);
+        mToastHandler.sendMessage(msg);
+        Log.d("Log", strMsg);
+    }
+
+    // 메시지 화면 출력을 위한 핸들러
+    Handler mToastHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                String strMsg = (String) msg.obj;
+                Toast.makeText(mMain, strMsg, Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
+
+    // 말풍선 출력
+    public void changeSpeechBubble(boolean result) {
+        // 메시지 텍스트를 핸들러에 전달
+        Message msg = Message.obtain(mSpeechBubbleHandler , 0, result);
+        mSpeechBubbleHandler.sendMessage(msg);
+    }
+
+    // 메시지 화면 출력을 위한 핸들러
+    Handler mSpeechBubbleHandler = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                boolean result = (boolean) msg.obj;
+                if(turn==-1)//결판이 났을 때
+                { //win, lose로 바꿔줌
+                    mSpeechBubbleImg.setVisibility(View.VISIBLE);
+                    if(result) mSpeechBubbleImg.setImageResource(R.drawable.winbubble);
+                    else mSpeechBubbleImg.setImageResource(R.drawable.losebubble);
+                }
+                else { //아직 시합중일 때
+                    if (result) mSpeechBubbleImg.setVisibility(View.VISIBLE);
+                    else mSpeechBubbleImg.setVisibility(View.INVISIBLE);
+                }
+            }
+        }
+    };
+
+
 
 }
