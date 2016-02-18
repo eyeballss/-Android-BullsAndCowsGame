@@ -10,7 +10,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.AdapterView;
@@ -292,6 +291,7 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         //야구공 움직여서 정답판 움직이기
         final EditText mAnswerTxt = (EditText)findViewById(R.id.answerTxt);
         ImageView mBallImg = (ImageView)findViewById(R.id.ballImg);
+        final ImageView mBatImg = (ImageView)findViewById(R.id.batImg);
 
         //visibility를 바꿈. 이제 secondLayer 위에서 놀게 됨.
         firstLayout.setVisibility(View.GONE);
@@ -436,9 +436,27 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         //야구공 움직여서 정답판 움직이기
         mAnswerTxt.setVisibility(View.VISIBLE);
         mBallImg.setVisibility(View.VISIBLE);
+        mBatImg.setVisibility(View.VISIBLE);
         mAnswerTxt.bringToFront();
 
-        //움직이는 리스너
+        //방망이 움직이는 리스너
+        mBatImg.setOnTouchListener(new View.OnTouchListener() {
+            public boolean onTouch(View v, MotionEvent event) {
+                FrameLayout.LayoutParams imgParams = (FrameLayout.LayoutParams) v.getLayoutParams();
+                if (v.getId() != R.id.batImg) return false;
+
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_MOVE:
+                        imgParams.topMargin = (int) event.getRawY() - v.getHeight() - 50;
+                        imgParams.leftMargin = (int) event.getRawX() - (v.getWidth() / 2) - 50;
+                        v.setLayoutParams(imgParams);
+                        break;
+                }
+                return false;
+            }
+        });
+
+        //야구공으로 정답판 움직이는 리스너
         mBallImg.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View view, MotionEvent event) {
@@ -458,14 +476,14 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
                         mAnswerTxt.setLayoutParams(txtParams);
                         break;
 
-                    case MotionEvent.ACTION_UP:
-                        imgParams.topMargin = (int) event.getRawY() - view.getHeight() - 50;
-                        imgParams.leftMargin = (int) event.getRawX() - (view.getWidth() / 2) - 50;
-                        view.setLayoutParams(imgParams);
-                        txtParams.topMargin = (int) event.getRawY() - mAnswerTxt.getHeight() - 50 - 50;
-                        txtParams.leftMargin = (int) event.getRawX() - (mAnswerTxt.getWidth() / 2) - 50;
-                        mAnswerTxt.setLayoutParams(txtParams);
-                        break;
+//                    case MotionEvent.ACTION_UP:
+//                        imgParams.topMargin = (int) event.getRawY() - view.getHeight() - 50;
+//                        imgParams.leftMargin = (int) event.getRawX() - (view.getWidth() / 2) - 50;
+//                        view.setLayoutParams(imgParams);
+//                        txtParams.topMargin = (int) event.getRawY() - mAnswerTxt.getHeight() - 50 - 50;
+//                        txtParams.leftMargin = (int) event.getRawX() - (mAnswerTxt.getWidth() / 2) - 50;
+//                        mAnswerTxt.setLayoutParams(txtParams);
+//                        break;
 
 //                    case MotionEvent.ACTION_DOWN:
 //                        view.setLayoutParams(imgParams);
@@ -477,33 +495,30 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             }
         }); //여기까지 야구공 움직이기
 
+
         final HashSet<String> answerNumSet = new HashSet<String>();
-        //정답판에서 엔터키로 바로 보내기
-        mAnswerTxt.setOnKeyListener(new View.OnKeyListener() {
-            @Override
-            public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if ((event.getAction() == KeyEvent.ACTION_DOWN) && (keyCode == KeyEvent.KEYCODE_ENTER)) {
+        //야구방망이를 누르면
+        mBatImg.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
 
 
-                    //내 턴이고 정답판에 뭔가 있을 때
-                    if(mAnswerTxt.getText().length()>0 && mDataThrd.checkTurn()){
-                        //정답판 판독
-                        for(int i=0; i<mAnswerTxt.length(); i++){
-                            answerNumSet.add(String.valueOf(mAnswerTxt.getText().charAt(i)));
-                        }
-                        if(answerNumSet.size()!=4){
-                            Toast.makeText(getApplicationContext(), "Try correct numbers : "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
-                        }
-                        else{
-                            mDataThrd.throwBall(String.valueOf(mAnswerTxt.getText())); //mDataThrd로 넘겨서 게임 확인
-                            Toast.makeText(getApplicationContext(), "throw "+mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
-                            mAnswerTxt.setText("");
-                        }
-                        answerNumSet.clear(); //셋을 정리해준다.
+                //내 턴이고 정답판에 뭔가 있을 때
+                if (mAnswerTxt.getText().length() > 0 && mDataThrd.checkTurn()) {
+                    //정답판 판독
+                    for (int i = 0; i < mAnswerTxt.length(); i++) {
+                        answerNumSet.add(String.valueOf(mAnswerTxt.getText().charAt(i)));
                     }
-
+                    if (answerNumSet.size() != 4) {
+                        Toast.makeText(getApplicationContext(), "Try correct numbers : " + mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                    } else {
+                        mDataThrd.throwBall(String.valueOf(mAnswerTxt.getText())); //mDataThrd로 넘겨서 게임 확인
+                        Toast.makeText(getApplicationContext(), "throw " + mAnswerTxt.getText(), Toast.LENGTH_SHORT).show();
+                        mAnswerTxt.setText("");
+                    }
+                    answerNumSet.clear(); //셋을 정리해준다.
                 }
-                return false;
+
+
             }
         });
     }
@@ -530,3 +545,9 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
 //        alert.show();
 //    }
 }
+
+
+//재시합 하게 해주세요.
+//야구방망이
+//두 개로 나눠봄
+//스크롤 ..어떻게 해보세요.

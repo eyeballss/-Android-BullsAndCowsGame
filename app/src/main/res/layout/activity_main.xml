@@ -257,6 +257,14 @@
 
 
     <ImageView
+        android:id="@+id/batImg"
+        android:visibility="gone"
+        android:layout_width="110dp"
+        android:layout_height="110dp"
+        android:src="@drawable/bat"
+        android:layout_marginLeft="230dp"
+        android:layout_marginTop="100dp"/>
+    <ImageView
         android:visibility="gone"
         android:id="@+id/ballImg"
         android:src="@drawable/ball"
@@ -284,7 +292,7 @@
         android:background="@drawable/blackboard"/>
 
     <ImageView
-        android:visibility="invisible"
+        android:visibility="gone"
         android:id="@+id/speechBubbleImg"
         android:src="@drawable/speechbubble"
         android:layout_width="80dp"
