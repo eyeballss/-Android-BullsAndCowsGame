@@ -23,7 +23,7 @@ public class DataThread extends Thread {
         FIRST, SECOND
     }
 
-    private MainActivity mMain; //mainActivity
+    private BluetoothGameActivity mMain; //mainActivity
     private final BluetoothSocket mmSocket; // 클라이언트 소켓
     private InputStream mmInStream; // 입력 스트림
     private OutputStream mmOutStream; // 출력 스트림
@@ -39,7 +39,7 @@ public class DataThread extends Thread {
 
     private ImageView mSpeechBubbleImg; //턴을 알려주는 말풍선 그림
 
-    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, MainActivity mainActivity, ImageView mSpeechBubbleImg) {
+    public DataThread(BluetoothSocket socket, TextView mStatusMsg, ArrayAdapter<String> mChattingAdapter, ArrayAdapter<String> mHistoryAdapter, BluetoothGameActivity mainActivity, ImageView mSpeechBubbleImg) {
         this.mHistoryAdapter = mHistoryAdapter;
         this.mStatusMsg = mStatusMsg;
         this.mMain = mainActivity;

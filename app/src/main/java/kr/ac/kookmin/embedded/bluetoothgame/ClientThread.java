@@ -20,10 +20,10 @@ public class ClientThread extends Thread {
     //    DaataThread mDataThrd; //데이터 송수신 스레드
     private BluetoothSocket mmCSocket;
     private TextView mStatusMsg;
-    private MainActivity main;
+    private BluetoothGameActivity main;
 
     // 원격 디바이스와 접속을 위한 클라이언트 소켓 생성
-    public ClientThread(BluetoothDevice device, TextView mStatusMsg, ServerThread mServerThrd, MainActivity main) {
+    public ClientThread(BluetoothDevice device, TextView mStatusMsg, ServerThread mServerThrd, BluetoothGameActivity main) {
 
         this.main = main;
         this.mStatusMsg = mStatusMsg;

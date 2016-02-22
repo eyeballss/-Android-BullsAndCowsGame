@@ -23,10 +23,10 @@ public class ServerThread extends Thread {
     private BluetoothServerSocket mmSSocket;
     private BluetoothAdapter mBluetoothAdapter;
     BluetoothSocket cSocket;
-    private MainActivity main;
+    private BluetoothGameActivity main;
 
     // 서버 소켓 생성
-    public ServerThread(BluetoothAdapter mBluetoothAdapter, TextView mStatusMsg, ServerThread mServerThrd, MainActivity main) {
+    public ServerThread(BluetoothAdapter mBluetoothAdapter, TextView mStatusMsg, ServerThread mServerThrd, BluetoothGameActivity main) {
         this.main = main;
         this.mBluetoothAdapter = mBluetoothAdapter;
         this.mStatusMsg = mStatusMsg;
