@@ -1,5 +1,7 @@
 package kr.ac.kookmin.embedded.bluetoothgame;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -24,7 +26,7 @@ class WConnectThread extends Thread {
     ClientReceiver clientReceiver;
     ClientSender clientSender;
 
-
+    //생성자
     public WConnectThread(ArrayAdapter<String> adapter, String ip, int port, WebGameActivity act, String id) {
         Log.d("Acting", "쓰레드 생성자 시작");
         wChattingAdapter = adapter;
@@ -86,6 +88,12 @@ class WConnectThread extends Thread {
     }
 
 
+    /***********************************
+     * 아래는 데이터를 주고 받는 쓰레드
+     * *********************************
+     */
+
+    //리시버 쓰레드
     class ClientReceiver extends Thread {
 
         public void run() {
@@ -94,6 +102,11 @@ class WConnectThread extends Thread {
             while (dis != null) {
                 try {
                     inputStr = dis.readUTF();
+
+                    //게임 초대장이라면
+                    if (inputStr.length() > 6 && inputStr.subSequence(0, 5).equals("+game")) {
+                        receiveGameRequestHdr(inputStr.substring(5)); //게임 받겠냐는 메세지를 띄움
+                    }
 
 //                    //게임 초대 메세지라면
 //                    if(inputStr.length()>6 && inputStr.subSequence(0, 5).equals("+game")){
@@ -113,7 +126,7 @@ class WConnectThread extends Thread {
         }
     }
 
-
+    //센더 쓰레드
     class ClientSender extends Thread {
         String msg;
 
@@ -154,9 +167,18 @@ class WConnectThread extends Thread {
 
                     //msg가 들어오면
                     if (msg != null) {
-                        dos.writeUTF("[ " + userId + " ] " + msg);
-                        dos.flush();
-                        Log.d("Acting", "서버로 데이터 보냄");
+
+                        //게임 프로토콜 메세지라면
+                        if(msg.length() > 5 && msg.substring(0, 4).equals("game") ||
+                                msg.length()>6 && msg.substring(0,5).equals("ygame") ||
+                                msg.length()>6 && msg.substring(0,5).equals("ngame")){
+                            dos.writeUTF(msg);
+                            dos.flush();
+                        }else {
+                            dos.writeUTF("[ " + userId + " ] " + msg);
+                            dos.flush();
+                            Log.d("Acting", "서버로 데이터 보냄");
+                        }
                         msg = null; //다시 세팅
                     }
 
@@ -172,10 +194,7 @@ class WConnectThread extends Thread {
         }
     }
 
-
-
-
-    //서버로 보낼 데이터를 저장
+    //서버로 보낼 데이터를 저장. 센더에서 사용.
     public void write(String msg) {
 
         clientSender.setMsg(msg);
@@ -183,6 +202,49 @@ class WConnectThread extends Thread {
     }
 
 
+    public void receiveGameRequest(final String opponentId) {
+        AlertDialog.Builder alert_confirm = new AlertDialog.Builder(webGameAct);
+        alert_confirm.setMessage(opponentId + " wants to play with you.").setCancelable(false).setPositiveButton("admit",
+
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+
+
+                        write("ygame" + opponentId); //같이 하자 메세지를 보냄!
+                    }
+                }).setNegativeButton("deny",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+
+                        write("ngame" + opponentId);
+                        dialog.cancel();
+                    }
+                });
+        AlertDialog alert = alert_confirm.create();
+        alert.show();
+    }
+
+
+    /**************************
+     * 아래는 핸들러
+     * ************************
+     */
+    //게임 요청 메세지에 응답하기 위한 메소드
+    public void receiveGameRequestHdr(String Msg) {
+        Message msg = Message.obtain(mChatHdr, 0, Msg);
+        mRecvGameHdr.sendMessage(msg);
+        Log.d("Log", "Chatting contents : " + Msg);
+    }
+
+    // 게임 요청 메세지에 응답하기 위한 핸들러
+    Handler mRecvGameHdr = new Handler() {
+        public void handleMessage(Message msg) {
+            if (msg.what == 0) {
+                String chatMsg = (String) msg.obj;
+                receiveGameRequest(chatMsg);
+            }
+        }
+    };
 
     //채팅 메세지를 리스트뷰에 올림
     public void sendChatMsg(String chatMsg) {
