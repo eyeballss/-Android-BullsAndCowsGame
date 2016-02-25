@@ -2,8 +2,10 @@ package kr.ac.kookmin.embedded.bluetoothgame;
 
 import android.app.AlertDialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Handler;
 import android.os.Message;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
@@ -25,6 +27,8 @@ class WConnectThread extends Thread {
 
     ClientReceiver clientReceiver;
     ClientSender clientSender;
+
+    boolean admit=false;
 
     //생성자
     public WConnectThread(ArrayAdapter<String> adapter, String ip, int port, WebGameActivity act, String id) {
@@ -88,6 +92,21 @@ class WConnectThread extends Thread {
     }
 
 
+
+    //콜백메소드 불러주는 녀석
+    private void sendCallback(String msg) {
+        Intent intent = new Intent("my-event");
+        // add data
+        intent.putExtra("message", msg);
+        LocalBroadcastManager.getInstance(webGameAct).sendBroadcast(intent);
+    }
+
+
+
+
+
+
+
     /***********************************
      * 아래는 데이터를 주고 받는 쓰레드
      * *********************************
@@ -104,8 +123,15 @@ class WConnectThread extends Thread {
                     inputStr = dis.readUTF();
 
                     //게임 초대장이라면
-                    if (inputStr.length() > 6 && inputStr.subSequence(0, 5).equals("+game")) {
+                    if(inputStr.equals("수락하셨습니다.")){
+//                        sendCallback(userId+" : 수락하여서 콜백 메세지를 보냅니다.");
+                        admit=true;
+                    }
+//                    //수락 후 p2p 메세지라면
+                    else if(inputStr.startsWith("*")) sendChatMsg(inputStr.substring(1));
+                    else if (inputStr.length() > 6 && inputStr.subSequence(0, 5).equals("+game")) {
                         receiveGameRequestHdr(inputStr.substring(5)); //게임 받겠냐는 메세지를 띄움
+                        opponentID=inputStr.substring(5);
                     }
 
 //                    //게임 초대 메세지라면
@@ -116,7 +142,7 @@ class WConnectThread extends Thread {
 //                    //게임 초대 메세지가 아니라면
 //                    else System.out.println(inputStr);
 
-                    sendChatMsg(inputStr);
+                    else sendChatMsg(inputStr);
                     Log.d("Acting", "데이터를 서버에서 받음");
 
                 } catch (IOException e) {
@@ -175,7 +201,8 @@ class WConnectThread extends Thread {
                             dos.writeUTF(msg);
                             dos.flush();
                         }else {
-                            dos.writeUTF("[ " + userId + " ] " + msg);
+                            String p2p=((admit)?("*"+opponentID+"*"):("")); //p2p 로 보냄
+                            dos.writeUTF(p2p+"[ " + userId + " ] " + msg);
                             dos.flush();
                             Log.d("Acting", "서버로 데이터 보냄");
                         }
@@ -198,6 +225,7 @@ class WConnectThread extends Thread {
     public void write(String msg) {
 
         clientSender.setMsg(msg);
+        if(msg.length()>5 && msg.substring(0,4).equals("game")) opponentID=msg.substring(4).trim();
         Log.d("Acting", "write에서 메세지 넘겨줌");
     }
 
@@ -229,9 +257,10 @@ class WConnectThread extends Thread {
      * 아래는 핸들러
      * ************************
      */
+
     //게임 요청 메세지에 응답하기 위한 메소드
     public void receiveGameRequestHdr(String Msg) {
-        Message msg = Message.obtain(mChatHdr, 0, Msg);
+        Message msg = Message.obtain(mRecvGameHdr, 0, Msg);
         mRecvGameHdr.sendMessage(msg);
         Log.d("Log", "Chatting contents : " + Msg);
     }
