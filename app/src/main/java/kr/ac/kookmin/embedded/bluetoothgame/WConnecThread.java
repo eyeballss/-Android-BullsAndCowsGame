@@ -127,6 +127,7 @@ class WConnectThread extends Thread {
 //                        sendCallback(userId+" : 수락하여서 콜백 메세지를 보냅니다.");
                         admit=true;
                     }
+                    
 //                    //수락 후 p2p 메세지라면
                     else if(inputStr.startsWith("*")) sendChatMsg(inputStr.substring(1));
                     else if (inputStr.length() > 6 && inputStr.subSequence(0, 5).equals("+game")) {

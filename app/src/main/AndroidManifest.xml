@@ -26,6 +26,8 @@
         </activity>
         <activity android:name=".WebGameActivity" >
         </activity>
+        <activity android:name=".WPlayActivity" >
+        </activity>
     </application>
 
 </manifest>

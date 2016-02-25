@@ -58,18 +58,19 @@ public class MainActivity extends AppCompatActivity {
                 new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        if (!input.getText().toString().equals("")) {
-
-                            if (input.getText().length() < 3) {
-                                Toast.makeText(getApplicationContext(), "ID length is 3 at least",
+                        String inputId = input.getText().toString();
+                        if (!inputId.toString().equals("")) {
+                            inputId = inputId.trim();
+                            if (inputId.length() < 3) {
+                                Toast.makeText(getApplicationContext(), "ID length is 3 at least\n" + "\"[" + inputId + "]\"",
                                         Toast.LENGTH_SHORT).show();
                                 getUserId();
-                            } else if (input.getText().toString().equals("game")) {
+                            } else if (inputId.toString().equals("info") || inputId.toString().equals("game")) {
                                 Toast.makeText(getApplicationContext(), "you can not use this as ID",
                                         Toast.LENGTH_SHORT).show();
                                 getUserId();
                             } else {
-                                userId = input.getText().toString();
+                                userId = inputId.toString();
                                 mWebSelBtn.setText("[" + userId + "]" + "\n" + "WEB Game Start");
                                 Log.d("Acting", "유저 아이디 정해짐 : " + userId);
                             }

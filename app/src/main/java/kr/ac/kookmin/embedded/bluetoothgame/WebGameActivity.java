@@ -2,9 +2,13 @@ package kr.ac.kookmin.embedded.bluetoothgame;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -124,6 +128,36 @@ public class WebGameActivity extends Activity {
 //        AlertDialog alert = alert_confirm.create();
 //        alert.show();
 //    }
+
+
+
+
+    //WPlayActivity로 넘어가기 위해 WebGameActivity로 콜백메소드 부름.
+    public void onResume() {
+        super.onResume();
+
+        // Register mMessageReceiver to receive messages.
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver,
+                new IntentFilter("my-event"));
+    }
+    // handler for received Intents for the "my-event" event
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // Extract data included in the Intent
+            String message = intent.getStringExtra("message");
+            Intent in = new Intent(WebGameActivity.this, WPlayActivity.class);
+            startActivity(in);
+            Log.d("Brdcast receiver!!!!!", "Got message: " + message);
+        }
+    };
+
+    @Override
+    protected void onPause() {
+        // Unregister since the activity is not visible
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+        super.onPause();
+    }
 
 
 }
